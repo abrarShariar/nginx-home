@@ -1,7 +1,7 @@
 # Setting up Grav with Nginx 
 
-I am running a Amazon EC2 instance. System config:
-Run `lscpu`:
+I am running a Amazon EC2 instance. 
+* System config. Run `lscpu`:
 ```
 Architecture:        x86_64
 CPU op-mode(s):      32-bit, 64-bit
@@ -28,8 +28,7 @@ L3 cache:            30720K
 NUMA node0 CPU(s):   0
 ```
 
-OS info:
-Run `cat /etc/os-release`: In my case it is as:
+    *OS info: Run `cat /etc/os-release`: In my case it is as:
 ```
 NAME="Amazon Linux"
 VERSION="2"
@@ -47,8 +46,6 @@ Notice the `ID_LIKE` key. So we need to follow the CentOS line of cmds.
 
 I am using `PHP 7.2.11 `. Install php along with the necessary modules:
 
-
-
 ```
 # yum install https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
@@ -61,7 +58,7 @@ I am using `PHP 7.2.11 `. Install php along with the necessary modules:
 # yum install php php-mbstring php-fpm php-mcrypt php-cli php-gd php-curl php-mysql php-ldap php-zip php-fileinfo 
 ```
 
-Check your php version with `php -v`. Several other modules will be necessary. Here is what my `php -m` returns:
+*Check your php version with `php -v`. Several other modules will be necessary. Here is what my `php -m` returns:
 
 ```
 [PHP Modules]
@@ -112,9 +109,9 @@ zlib
 [Zend Modules]
 ```
 
-You MUST install the `php-fpm` module (in case you missed it). It is required for running Nginx.
+* You MUST install the `php-fpm` module (in case you missed it). It is required for running Nginx.
 
-The `mbstring` module is super important to run Grav. If you missed/forgot to install any modules, Grav will throw error once you run: `./bin/grav install`
+* The `mbstring` module is super important to run Grav. If you missed/forgot to install any modules, Grav will throw error once you run: `./bin/grav install`
 
 
 # Setup Nginx:
@@ -238,11 +235,11 @@ http {
     include sites-enabled/*;
 }
 ```
-NOTICE the `user` key on the top is set to `nginx`. This is super important. I had to set up user:group for the webroot directories as `nginx:nginx`
+* NOTICE the `user` key on the top is set to `nginx`. This is super important. I had to set up user:group for the webroot directories as `nginx:nginx`
 
-Now, I have set my directory to serve files as `/var/www/`. Which basically means the nginx server will lookup files inside this directory in order to serve.
+* Now, I have set my directory to serve files as `/var/www/`. Which basically means the nginx server will lookup files inside this directory in order to serve.
 
-File permissions can be a pain in the ass. Make sure you set up the same user as user:group in all the directories/files you want to serve. The user should be the same as the one mentioned in the `nginx.conf`
+* File permissions can be a pain in the ass. Make sure you set up the same user as user:group in all the directories/files you want to serve. The user should be the same as the one mentioned in the `nginx.conf`
 
 Change it quickly:
 
@@ -250,7 +247,7 @@ Change it quickly:
 # sudo chown -R nginx:nginx /var/www/
 ```
 
-Now clone a fresh installation of grav inside `/var/www/`
+* Now clone a fresh installation of grav inside `/var/www/`
 
 ```
 # git clone https://github.com/getgrav/grav.git
@@ -269,7 +266,6 @@ We will copy it inside the `sites-available`. I didn't have the directories `sit
 ```
 
 Now do this:
-
 
 ```
 # sudo cp /var/www/grav/webserver-configs/nginx.conf /etc/nginx/sites-available/grav-site
@@ -329,7 +325,7 @@ server {
 }
 ```
 
-NOTICE here - I want to serve from `/var/www/cova-blog/`, so there are a few changes I did:
+N* OTICE here - I want to serve from `/var/www/cova-blog/`, so there are a few changes I did:
 
 * The root is given as the root directory where nginx should serve:
 ```
@@ -353,5 +349,45 @@ Restart Nginx:
 ```
 
 
-# Gotchas
+# Debugging
+
+I had to face a few gotchas related to file permissions and config stuffs. You can check the log of nginx errors:
+```
+# sudo tail -f /var/log/nginx/error.log
+```
+
+### php-fpm
+
+If this module is not installed, you won't be able to run Nginx properly. It will throw error codes. Check:
+
+```
+# cd /var/run/php-fpm
+```
+
+Notice if there is a `php-fpm.sock` file inside it. Otherwise your error log should mention about a missing `.sock` file. I had to do a minor change in the `/etc/nginx/sites-available/grav-site`
+
+Notice this line:
+```
+    fastcgi_pass unix:/var/run/php-fpm/php-fpm.sock;
+```
+
+I followed: [SO](https://stackoverflow.com/questions/40059745/nginx-connect-to-unix-var-run-php7-0-fpm-sock-failed-2-no-such-file-or-dir). This would give you an idea about how to fix this.
+
+### Permissions
+
+Another error I faced, even if the grav site loads but it fails to load the `session`. Pay attention to the error msg it should give you an idea that the problem is related to permissions.
+
+Fix it by adding the `nginx` group in the respective directory.
+
+I had to do this:
+
+```
+# cd php/
+# sudo chown -R :nginx ./session
+```
+
+
+***Happy Hacking***
+
+
 
